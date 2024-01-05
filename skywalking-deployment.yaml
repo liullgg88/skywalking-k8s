@@ -7,12 +7,13 @@ metadata:
     app: skywalking
 data:
   # #存储方式
+  SW_ENABLE_UPDATE_UI_TEMPLATE: "true" # 开启dashboard编辑修改功能
   SW_STORAGE: "elasticsearch"
   SW_STORAGE_ES_CLUSTER_NODES: "es7-cluster.elasticsearch.svc.cluster.local:19200"
   SW_ES_USER: ""
   SW_ES_PASSWORD: ""
   #skywalking-oap监听端口
-  SW_OAP_ADDRESS: "http://skywalking-oap:12800"
+  SW_OAP_ADDRESS: "http://skywalking-oap.skywalking.svc.cluster.local:12800"
 
 ---
 apiVersion: apps/v1
@@ -34,7 +35,7 @@ spec:
     spec:
       containers:
         - name: skywalking-oap
-          image: apache/skywalking-oap-server:9.3.0
+          image: apache/skywalking-oap-server:9.5.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 11800
@@ -106,7 +107,7 @@ spec:
     spec:
       containers:
         - name: skywalking-ui
-          image: apache/skywalking-ui:9.3.0
+          image: apache/skywalking-ui:9.5.0
           ports:
             - containerPort: 8080
               name: web
