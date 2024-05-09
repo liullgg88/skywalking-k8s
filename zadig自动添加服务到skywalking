@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $EnvName$-shenyu-bootstrap
+spec:
+  replicas: {{.REPLICE_NUM}}
+  selector:
+    matchLabels:
+      app: $EnvName$-shenyu-bootstrap
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%							
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: $EnvName$-shenyu-bootstrap
+    spec:
+      {{ if .SKYWALKING }}
+      volumes:
+      - emptyDir: {}
+        name: paas-apm2
+      initContainers:
+      - command:
+        - /bin/sh
+        - -c
+        - cp -R /skywalking/agent /agent/
+        image: swr.cn-east-3.myhuaweicloud.com/op-monitor/skywalking-java-agent:9.0.0-alpine
+        imagePullPolicy: IfNotPresent
+        name: init-skywalking
+        resources:
+          limits:
+            cpu: 250m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /agent
+          name: paas-apm2
+      {{ end }}
+      containers:
+      - env:
+        - name: TZ
+          value: Asia/Shanghai
+        - name: APOLLO_ACCESS_KEY_SECRET
+          value: {{.APOLLO_ACCESS_KEY_SECRET}}
+        {{ if .SKYWALKING  }}
+        - name: JAVA_TOOL_OPTIONS
+          value: {{.JAVA_TOOL_OPTIONS}}
+        {{ end }}
+        envFrom:
+        - configMapRef:
+            name: {{.APOLLO_FILE}}
+        image: acr.nhsoftcloud.com/cn-nhsoft/shenyu-bootstrap:20240423170158-540-master
+        name: shenyu-bootstrap
+        ports:
+        - containerPort: 9195
+        {{ if  .SKYWALKING  }}
+        volumeMounts:
+        - mountPath: /skywalking
+          name: paas-apm2
+        {{ end }}
+        resources:
+          limits:
+            memory: {{.MEM_USAGE}}Mi
+          requests:
+            memory: {{.MEM_USAGE}}Mi
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /actuator/health
+            port: 9195
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /actuator/health
+            port: 9195
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        startupProbe:
+          failureThreshold: 12
+          httpGet:
+            path: /actuator/health
+            port: 9195
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+      imagePullSecrets:
+        - name: default-registry-secret
